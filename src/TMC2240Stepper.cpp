@@ -54,10 +54,10 @@ uint32_t TMC2240Stepper::read() {
   } else {
     SPI.beginTransaction(SPISettings(spi_speed, MSBFIRST, SPI_MODE3));
     switchCSpin(LOW);
-    buf[0] = TMC_SW_SPI->transfer(0xFF);
-    buf[1] = TMC_SW_SPI->transfer(0xFF);
-    buf[2] = TMC_SW_SPI->transfer(0xFF);
-    buf[3] = TMC_SW_SPI->transfer(0xFF);
+    buf[0] = SPI.transfer(0xFF);
+    buf[1] = SPI.transfer(0xFF);
+    buf[2] = SPI.transfer(0xFF);
+    buf[3] = SPI.transfer(0xFF);
     SPI.endTransaction();
   }
   switchCSpin(HIGH);
@@ -65,8 +65,15 @@ uint32_t TMC2240Stepper::read() {
 }
 void TMC2240Stepper::send(uint32_t data)
 {
-  switchCSpin(LOW);
-  TMC_SW_SPI->transfer(data);
+  if (TMC_SW_SPI != nullptr) {
+    switchCSpin(LOW);
+    TMC_SW_SPI->transfer(data);
+  } else {
+    SPI.beginTransaction(SPISettings(spi_speed, MSBFIRST, SPI_MODE3));
+    switchCSpin(LOW);
+    SPI.transfer(data);
+    SPI.endTransaction();
+  }
   switchCSpin(HIGH);
 }
 
@@ -82,11 +89,11 @@ void TMC2240Stepper::write(uint8_t addressByte, uint32_t config) {
   } else {
     SPI.beginTransaction(SPISettings(spi_speed, MSBFIRST, SPI_MODE3));
     switchCSpin(LOW);
-    TMC_SW_SPI->transfer(addressByte|0x80);
-    TMC_SW_SPI->transfer((config >> 24) & 0xFF);
-    TMC_SW_SPI->transfer((config >> 16) & 0xFF);
-    TMC_SW_SPI->transfer((config >>  8) & 0xFF);
-    TMC_SW_SPI->transfer(config & 0xFF);
+    SPI.transfer(addressByte|0x80);
+    SPI.transfer((config >> 24) & 0xFF);
+    SPI.transfer((config >> 16) & 0xFF);
+    SPI.transfer((config >>  8) & 0xFF);
+    SPI.transfer(config & 0xFF);
     SPI.endTransaction();
   }
   switchCSpin(HIGH);
@@ -94,7 +101,11 @@ void TMC2240Stepper::write(uint8_t addressByte, uint32_t config) {
 
 void TMC2240Stepper::begin() {
   //set pins
-  TMC_SW_SPI->init();
+  if (TMC_SW_SPI != nullptr) {
+    TMC_SW_SPI->init();
+  }else{
+    SPI.begin();
+  }
   pinMode(_pinCS, OUTPUT);
   switchCSpin(HIGH);
 }
